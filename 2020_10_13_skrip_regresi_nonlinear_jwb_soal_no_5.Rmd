@@ -1,0 +1,123 @@
+---
+title: "Contoh Kasus Analisis Regresi Lanjut"
+author: "I Wayan Sumarjaya (sumarjaya@unud.ac.id)"
+date: "10/14/2020"
+output: 
+  pdf_document:
+    keep_tex: yes
+number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Jawaban Soal Nomor 5
+
+Diketahui model regresi nonlinear dengan bentuk
+$$
+  Y = \alpha -\beta\rho^X + \varepsilon
+$$
+Fokuskan pada model tanpa $\varepsilon$:
+$$
+  Y = \alpha -\beta\rho^X.
+$$
+Apa yang bisa kita lakukan? Kita akan mencoba melinearkan persamaan ini. Membawa $\alpha$ ke sebelah kiri persamaan dan mengurangkan dengan $Y$ menghasilkan
+$$
+\begin{aligned}
+	Y - \alpha &= -\beta\rho^X\notag\\
+	\alpha - Y &= \beta\rho^X\notag\\
+\end{aligned}
+$$
+$$
+\begin{aligned}
+	\ln(\alpha - Y) & = \ln(\beta\rho^X)\notag\\
+					  & = \ln\beta + \ln\rho^X\notag\\
+					  & = \ln\beta + X \ln\rho\notag\\
+					  & = \ln\beta + \ln\rho X\notag\\
+\end{aligned}
+$$
+atau reparameterisasi menjadi
+$$
+		Y^*			 = \alpha_0 + \alpha_1 X.
+$$
+
+Di sini $Y^* = \ln(\alpha - Y)$, $\alpha_0 = \ln\beta$, dan $\alpha_1 = \ln\rho$.
+
+## 1. Plot Data
+
+Sebelum melakukan analisis data lebih lanjut, kita terlebih dahulu memasukkan data dan memplot data tersebut.
+
+```{r}
+soal.5 = read.table("soal_5.txt",header=T) # memasukkan data
+soal.5 # melihat data
+```
+
+Sekarang kita akan memplot data:
+```{r,out.width="60%",fig.align='center'}
+X = soal.5$X # mengakses X
+Y = soal.5$Y # mengakses Y
+plot(X,Y,col="blue") # memplot X vs Y
+```
+
+Berdasarkan plot kita akan melakukan penyuaian terhadap regresi dengan terlebih dahulu melinearkan. Lihat kembali kita harus mengeset $\alpha - Y > 0$.
+
+## 2. Melakukan transformasi data
+
+Di sini kita akan memilih $\alpha = 75$. 
+```{r}
+alfa = 75 # nilai ini dipilih agar selisih dengan Y bernilai positif
+Y.star = log(alfa-Y)
+reg.soal.5 = lm(Y.star~X)
+summary(reg.soal.5)
+```
+Berdasarkan luaran kita peroleh $\hat{\alpha}_0 = 3{,}38034$ dan $\hat{\alpha}_1 = -0{,}40109$. Sekarang, dari hubungan $\alpha_0 = \ln \beta$ dan $\alpha_1 = \rho$ kita peroleh $\beta = \exp(\alpha_0)$ dan $\rho = \exp(\alpha_2)$. Sekarang, nilai-nilai ini akan kita gunakan sebagai nilai awal.
+
+```{r}
+beta.0 = exp(3.38034)
+rho.0 = exp(-0.40109)
+```
+
+## 3. Melakukan regresi nonlinear
+
+Kita telah mendapatkan nilai awal $\beta^{(0)}$ dan $\rho^{0}$. 
+```{r}
+nlreg.soal.5 = nls(Y~alfa - beta*rho^X,start=list(alfa=75,beta=beta.0,rho=rho.0),control = list(maxiter = 999))
+summary(nlreg.soal.5)
+```
+## 4. Memplot kurva regresi
+
+Sekarang kita akan memplot kurva regresi.
+```{r,out.width="65%",fig.align='center'}
+plot(X,Y)
+x = X 
+curve(72.4326-28.2519*(0.5968^x),x,type="l",add=T,col="red")
+```
+
+## 5. Melakukan inferensi  
+
+Sekarang kita akan melakukan pemeriksaan diagnostik.
+```{r,out.width="65%",fig.align='center'}
+fit.nlreg = fitted(nlreg.soal.5) # fitted value
+res.nlreg = residuals(nlreg.soal.5)
+plot(fit.nlreg,res.nlreg,xlab="Nilai suaian (fitted value)", ylab="Sisaan (residual", main="")
+abline(h=0,col="blue")
+```  
+### Selang kepercayaan untuk masing-masing parameter
+
+```{r}
+confint(nlreg.soal.5)
+```
+
+## 6. Plot kuantil-kuantil dan uji kenormalan
+
+```{r,out.width="65%",fig.align="center",fig.cap="Plot kuantil-kuantil"}
+qqnorm(res.nlreg)
+qqline(res.nlreg,col="blue")
+```
+Plot kuantil-kuantil (QQ) plot ini cukup baik mengingat ukuran sampel yang sangat kecil.
+
+Dalam kasus ini, ukuran sampel sangat sedikit.
+```{r}
+shapiro.test(res.nlreg)
+```
